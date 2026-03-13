@@ -1,266 +1,225 @@
-# 💳 Wallet Transaction System
-
-A backend wallet management system built using **Node.js** and **Express.js** that allows users to create wallets, deposit money, transfer funds, and track transaction history.
-
-This project simulates the core backend logic of a digital wallet system where each user has a wallet and can perform financial transactions securely.
-
----
-
-# 🚀 Features
-
-* User registration
-* Automatic wallet creation for each user
-* Deposit money into wallet
-* Transfer money between users
-* Check wallet balance
-* View transaction history
-* Basic validation for transactions
-
----
-
-# 🏗 Project Architecture
-
-The application follows a layered backend architecture:
-
-Client Request
-  ↓
-Routes
-  ↓
-Controllers
-  ↓
-Business Logic / Services
-  ↓
-Database
-
-### Components
-
-**Routes**
-
-* Define API endpoints
-* Handle incoming HTTP requests
-
-**Controllers**
-
-* Process request data
-* Call business logic functions
-* Send response to client
-
-**Services / Logic**
-
-* Handle wallet operations
-* Manage transaction processing
-
-**Database**
-
-* Stores users, wallets, and transactions
-
----
-
-# 📂 Project Structure
-
-```
-wallet-transaction-assignment
-│
-├── controllers
-│   ├── userController.js
-│   └── walletController.js
-│
-├── routes
-│   ├── userRoutes.js
-│   └── walletRoutes.js
-│
-├── models
-│   ├── User.js
-│   ├── Wallet.js
-│   └── Transaction.js
-│
-├── config
-│   └── db.js
-│
-├── app.js
-└── package.json
-```
-
----
-
-# 🗄 Database Design
-
-### Users Table
-
-| Field | Description    |
-| ----- | -------------- |
-| id    | Unique user ID |
-| name  | User name      |
-| email | User email     |
-
----
-
-### Wallet Table
-
-| Field   | Description            |
-| ------- | ---------------------- |
-| id      | Wallet ID              |
-| user_id | Linked user            |
-| balance | Current wallet balance |
-
----
-
-### Transactions Table
-
-| Field     | Description        |
-| --------- | ------------------ |
-| id        | Transaction ID     |
-| amount    | Transaction amount |
-| type      | Deposit / Transfer |
-| user_id   | Related user       |
-| timestamp | Transaction time   |
-
----
-
-# 🔄 Workflow
-
-### 1️⃣ User Registration
-
-POST /users/register
-
-Steps:
-
-1. Create a new user
-2. Create a wallet for the user
-3. Set wallet balance to 0
-
----
-
-### 2️⃣ Deposit Money
-
-POST /wallet/deposit
-
-Steps:
-
-1. Validate user
-2. Add amount to wallet
-3. Record transaction in database
-
----
-
-### 3️⃣ Transfer Money
-
-POST /wallet/transfer
-
-Steps:
-
-1. Verify sender and receiver
-2. Check sender wallet balance
-3. Deduct money from sender
-4. Add money to receiver wallet
-5. Record transaction
-
----
-
-### 4️⃣ Get Wallet Balance
-
-GET /wallet/:userId
-
-Returns the current wallet balance for a user.
-
----
-
-### 5️⃣ Get Transaction History
-
-GET /transactions/:userId
-
-Returns all transactions performed by the user.
-
----
-
-# 🛠 Tech Stack
-
-Backend:
-
-* Node.js
-* Express.js
-
-Database:
-
-* SQL / NoSQL (depending on configuration)
-
-Tools:
-
-* Postman for API testing
-* Git for version control
-
----
-
-# ▶️ Installation
-
-Clone the repository
-
-```
-git clone https://github.com/Adarsh01302/wallet-transaction-assignment.git
-```
-
-Navigate to project directory
-
-```
-cd wallet-transaction-assignment
-```
-
-Install dependencies
-
-```
+### Wallet & Order Transaction System
+
+**Tech stack**: Node.js, Express, SQLite (better-sqlite3).
+
+### Project structure (MVC style)
+
+This is an API-only backend, organized as **Routes → Controllers → Models**:
+
+- **Entry**
+  - `src/server.js`: starts the HTTP server (`app.listen`)
+  - `src/app.js`: builds the Express app, middleware, mounts routes
+- **Routes**
+  - `src/routes/adminRoutes.js`: `/admin/*`
+  - `src/routes/orderRoutes.js`: `/orders/*`
+  - `src/routes/walletRoutes.js`: `/wallet/*`
+- **Controllers**
+  - `src/controllers/adminController.js`
+  - `src/controllers/orderController.js`
+  - `src/controllers/walletController.js`
+- **Models (DB logic)**
+  - `src/models/walletModel.js`
+  - `src/models/orderModel.js`
+- **DB init**
+  - `src/db.js`: SQLite setup + table creation (creates `data.sqlite`)
+- **Utilities**
+  - `src/utils/amount.js`: amount parsing (stored in cents)
+
+### Setup
+
+- **Install dependencies**
+
+```bash
+cd e:\\Assiment
 npm install
 ```
 
-Run the server
+- **Run the server**
 
-```
+```bash
 npm start
 ```
 
-Server will start on:
+Server runs on **http://localhost:3000** by default.
 
+### Testing with Postman
+
+Use `http://localhost:3000` as the base URL.
+
+- **Admin requests (credit/debit)**
+  - **Header**: `Content-Type: application/json`
+  - **Body**: raw JSON
+- **Client requests**
+  - **Header**: `client-id: <CLIENT_ID>`
+  - Add `Content-Type: application/json` for POST requests
+
+Important: ensure there are **no spaces** in the URL (a leading space becomes `%20` and causes `Cannot POST /%20/...`).
+
+### Data model (SQLite)
+
+- **clients**: `id`
+- **wallets**: `client_id`, `balance_cents`
+- **wallet_ledger**: `id`, `client_id`, `change_cents`, `type`, `reference_id`
+- **orders**: `id`, `client_id`, `amount_cents`, `status`, `fulfillment_id`
+
+Amounts are stored in **cents** for accuracy; API exposes amounts as decimal numbers.
+
+### Key behaviors / edge cases
+
+- **Atomic order debit + creation**: order creation + wallet debit + ledger entry are executed in a single SQLite transaction.
+- **Insufficient funds**: returns `400` with `{ "error": "Insufficient wallet balance" }`.
+- **Fulfillment failure**:
+  - The order is **kept** (wallet is already debited) and order `status` becomes `fulfillment_failed`.
+  - API returns `502` with `{ "error": "Order created but fulfillment failed", "order_id": <id> }`.
+- **Order visibility**: `GET /orders/:orderId` returns `404` if the order does not belong to the `client-id`.
+
+### APIs
+
+- **Admin – Credit Wallet**
+  - **POST** `/admin/wallet/credit`
+  - **Body**:
+
+```json
+{
+  "client_id": "CLIENT_1",
+  "amount": 100.5
+}
 ```
-http://localhost:3000
+
+  - **Response**:
+
+```json
+{
+  "client_id": "CLIENT_1",
+  "balance": 100.5
+}
 ```
 
----
+- **Admin – Debit Wallet**
+  - **POST** `/admin/wallet/debit`
+  - **Body**:
 
-# 📌 Example Transaction
+```json
+{
+  "client_id": "CLIENT_1",
+  "amount": 50
+}
+```
 
-Initial Balance
+  - **Errors**:
+    - `400` if insufficient balance or invalid amount.
 
-User A → ₹2000
-User B → ₹1000
+- **Client – Create Order**
+  - **POST** `/orders`
+  - **Headers**:
+    - `client-id: CLIENT_1`
+  - **Body**:
 
-User A transfers ₹500 to User B
+```json
+{
+  "amount": 25
+}
+```
 
-Result:
+  - **Behavior**:
+    - Validates wallet balance.
+    - Deducts amount from wallet inside a DB transaction.
+    - Creates order row.
+    - Calls fulfillment API `https://jsonplaceholder.typicode.com/posts` with:
 
-User A → ₹1500
-User B → ₹1500
+```json
+{
+  "userId": "<CLIENT_ID>",
+  "title": "<ORDER_ID>"
+}
+```
 
-Transactions recorded:
+    - Stores returned `id` as `fulfillment_id`.
+    - If fulfillment fails, order is kept with status `fulfillment_failed`.
 
-A → -500
-B → +500
+  - **Success response** (`201`):
 
----
+```json
+{
+  "order_id": 1,
+  "client_id": "CLIENT_1",
+  "amount": 25,
+  "status": "fulfilled",
+  "fulfillment_id": "101"
+}
+```
 
-# 📈 Future Improvements
+- **Client – Get Order Details**
+  - **GET** `/orders/{order_id}`
+  - **Headers**:
+    - `client-id: CLIENT_1`
+  - **Response**:
 
-* JWT authentication
-* Transaction rollback support
-* API rate limiting
-* Better error handling
-* Unit testing
-* Security improvements
+```json
+{
+  "order_id": 1,
+  "client_id": "CLIENT_1",
+  "amount": 25,
+  "status": "fulfilled",
+  "fulfillment_id": "101",
+  "created_at": "2026-03-13T10:00:00Z"
+}
+```
 
----
+  - **Errors**:
+    - `404` if order not found for that client.
 
-# 👨‍💻 Author
+- **Wallet Balance**
+  - **GET** `/wallet/balance`
+  - **Headers**:
+    - `client-id: CLIENT_1`
+  - **Response**:
 
-Adarsh Mishra
-MCA Student | Backend Developer
+```json
+{
+  "client_id": "CLIENT_1",
+  "balance": 75
+}
+```
 
-GitHub:
-https://github.com/Adarsh01302
+### Sample cURL commands
+
+- **Credit wallet**
+
+```bash
+curl -X POST http://localhost:3000/admin/wallet/credit \
+  -H "Content-Type: application/json" \
+  -d '{"client_id":"CLIENT_1","amount":100}'
+```
+
+- **Debit wallet**
+
+```bash
+curl -X POST http://localhost:3000/admin/wallet/debit \
+  -H "Content-Type: application/json" \
+  -d '{"client_id":"CLIENT_1","amount":20}'
+```
+
+- **Create order**
+
+```bash
+curl -X POST http://localhost:3000/orders \
+  -H "Content-Type: application/json" \
+  -H "client-id: CLIENT_1" \
+  -d '{"amount":25}'
+```
+
+- **Get order**
+
+```bash
+curl http://localhost:3000/orders/1 \
+  -H "client-id: CLIENT_1"
+```
+
+- **Get wallet balance**
+
+```bash
+curl http://localhost:3000/wallet/balance \
+  -H "client-id: CLIENT_1"
+```
+
